@@ -1,0 +1,154 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Master safety net: deny everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null
+        && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string
+        && id.size() > 0
+        && id.size() <= 128
+        && id.matches('^[a-zA-Z0-9_-]+$');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'role', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'name', 'email', 'photoUrl', 'role', 'createdAt'])
+        && isValidId(data.uid)
+        && data.uid == userId
+        && data.name is string
+        && data.name.size() >= 1
+        && data.name.size() <= 120
+        && data.email is string
+        && data.email.size() >= 3
+        && data.email.size() <= 160
+        && (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 500))
+        && data.role == 'customer'
+        && data.createdAt is timestamp;
+    }
+
+    function isValidBooking(data, bookingId) {
+      let requiredFields = [
+        'bookingId',
+        'userId',
+        'userName',
+        'userEmail',
+        'restaurantId',
+        'restaurantName',
+        'tableId',
+        'tableNumber',
+        'bookingDate',
+        'startTime',
+        'endTime',
+        'partySize',
+        'notes',
+        'status',
+        'createdAt'
+      ];
+      return data.keys().hasAll(requiredFields)
+        && data.keys().hasOnly(requiredFields)
+        && isValidId(data.bookingId)
+        && data.bookingId == bookingId
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && data.userName is string
+        && data.userName.size() >= 1
+        && data.userName.size() <= 120
+        && data.userEmail is string
+        && data.userEmail.size() >= 3
+        && data.userEmail.size() <= 160
+        && data.restaurantId is string
+        && data.restaurantId.size() >= 1
+        && data.restaurantId.size() <= 64
+        && data.restaurantId.matches('^[a-zA-Z0-9_-]+$')
+        && data.restaurantName is string
+        && data.restaurantName.size() >= 1
+        && data.restaurantName.size() <= 120
+        && data.tableId is string
+        && data.tableId.size() >= 1
+        && data.tableId.size() <= 64
+        && data.tableId.matches('^[a-zA-Z0-9_-]+$')
+        && data.tableNumber is string
+        && data.tableNumber.size() >= 1
+        && data.tableNumber.size() <= 20
+        && data.bookingDate is string
+        && data.bookingDate.size() == 10
+        && data.bookingDate.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && data.startTime is string
+        && data.startTime.size() == 5
+        && data.startTime.matches('^\\d{2}:\\d{2}$')
+        && data.endTime is string
+        && data.endTime.size() == 5
+        && data.endTime.matches('^\\d{2}:\\d{2}$')
+        && data.partySize is int
+        && data.partySize >= 1
+        && data.partySize <= 20
+        && data.notes is string
+        && data.notes.size() <= 500
+        && data.status in ['pending', 'confirmed', 'cancelled']
+        && data.createdAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time;
+      allow update: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email
+        && incoming().role == existing().role
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'photoUrl']);
+      allow delete: if false;
+    }
+
+    match /bookings/{bookingId} {
+      allow get: if isSignedIn()
+        && isValidId(bookingId)
+        && existing().userId == request.auth.uid;
+      allow list: if isSignedIn()
+        && existing().userId == request.auth.uid;
+      allow create: if isSignedIn()
+        && isValidId(bookingId)
+        && isValidBooking(incoming(), bookingId)
+        && incoming().status == 'pending'
+        && incoming().createdAt == request.time;
+      allow update: if isSignedIn()
+        && isValidId(bookingId)
+        && isValidBooking(incoming(), bookingId)
+        && existing().userId == request.auth.uid
+        && incoming().userId == existing().userId
+        && incoming().bookingId == existing().bookingId
+        && incoming().createdAt == existing().createdAt
+        && existing().status in ['pending', 'confirmed']
+        && incoming().status == 'cancelled'
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status']);
+      allow delete: if false;
+    }
+  }
+}

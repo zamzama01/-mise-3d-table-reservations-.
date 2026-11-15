@@ -1,0 +1,178 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Authenticated restaurant guest profile synced from Google Sign-In.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "description": "Firebase Authentication UID"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Guest display name extracted from Google account"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 160,
+          "description": "Verified Gmail address"
+        },
+        "photoUrl": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Optional Google profile avatar URL"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["customer"],
+          "description": "Account role (self-signup restricted to customer)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        }
+      },
+      "required": ["uid", "name", "email", "role", "createdAt"]
+    },
+    "TableBooking": {
+      "title": "Table Booking",
+      "description": "Restaurant table reservation saved with logged-in user name, email, and confirmation details.",
+      "type": "object",
+      "properties": {
+        "bookingId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "description": "Unique booking reference ID"
+        },
+        "userId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "description": "Firebase Auth UID of the guest who booked"
+        },
+        "userName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Logged-in guest full name"
+        },
+        "userEmail": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 160,
+          "description": "Logged-in guest Gmail address"
+        },
+        "restaurantId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "description": "Restaurant ID"
+        },
+        "restaurantName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Restaurant name"
+        },
+        "tableId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "description": "Reserved table ID"
+        },
+        "tableNumber": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "description": "Reserved table label (e.g. T3)"
+        },
+        "bookingDate": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "Reservation date (YYYY-MM-DD)"
+        },
+        "startTime": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 5,
+          "pattern": "^\\d{2}:\\d{2}$",
+          "description": "Reservation start time (HH:MM 24h)"
+        },
+        "endTime": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 5,
+          "pattern": "^\\d{2}:\\d{2}$",
+          "description": "Reservation end time (HH:MM 24h)"
+        },
+        "partySize": {
+          "type": "integer",
+          "description": "Number of guests (1-20)"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Special requests or seating notes"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "confirmed", "cancelled"],
+          "description": "Current reservation status"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        }
+      },
+      "required": [
+        "bookingId",
+        "userId",
+        "userName",
+        "userEmail",
+        "restaurantId",
+        "restaurantName",
+        "tableId",
+        "tableNumber",
+        "bookingDate",
+        "startTime",
+        "endTime",
+        "partySize",
+        "notes",
+        "status",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Private user profiles keyed by Firebase UID."
+    },
+    "/bookings/{bookingId}": {
+      "schema": {
+        "$ref": "#/entities/TableBooking"
+      },
+      "description": "Customer table reservations keyed by bookingId."
+    }
+  }
+}

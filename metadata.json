@@ -1,0 +1,6 @@
+{
+  "name": "Mise — Real-Time Table Reservations",
+  "description": "Multi-restaurant table booking platform with interactive 3D dining room floorplans, atomic double-booking prevention, owner management, and Gemini dining recommendations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
